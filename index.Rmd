@@ -1,0 +1,795 @@
+---
+title: "PRESENTACIÓN"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(flexdashboard)
+library(rio)
+library(dplyr)
+library(BBmisc)
+library(cluster)
+library(factoextra)
+library(kableExtra)
+library(ggplot2)
+library(tidyverse)
+library(corrplot)
+library(GPArotation)
+library(mapproj)
+library(psych)
+library(lm.beta)
+library(ggplot2)
+library(sjPlot)
+data=import("EstadisticaData.xlsx")
+```
+
+```{r include=FALSE}
+colSums(is.na(data))
+data_clean <- na.omit(data)
+```
+
+```{r include=FALSE}
+colSums(is.na(data_clean))
+```
+
+```{r}
+data_clean$country <- data_clean$PAÍS
+```
+
+```{r include=FALSE}
+str(data)
+```
+
+```{r}
+data_clean$GPI_22_invertido <- scale(data_clean$GPI_22) * -1
+```
+
+# VARIABLE CENTRAL
+
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### GLOBAL PEACE INDEX
+
+```{r}
+ggplot(data_clean, aes(x = GPI_22_invertido)) +
+  geom_histogram(
+    aes(y = ..density..), 
+    bins = 30,
+    fill = "red",
+    color = "black",
+    alpha = 0.7
+  ) +
+  # Añadir curva de densidad
+  geom_density(color = "blue", linewidth = 1) +
+  # Personalizar etiquetas y título
+  labs(
+    title = "Distribución del Índice Global de Paz (2022)",
+    x = "Índice Global de Paz",
+    y = "Frecuencia",
+    caption = "Fuente: Global Peace Index"
+  ) +
+  # Añadir tema y personalización
+  theme_light() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 10)
+  )
+```
+
+>La variable central es el Índice Global de Paz, para el análisis de esta se ha invertido la variable, es decir, que en lugar de que los valores más altos representan menos paz (como en el GPI original), aquí los valores más altos representan mayor paz. Se puede ver que en el histograma los valores negativos (izquierda) representan países menos pacíficos, mientras que los valores positivos (derecha) indican países más pacíficos. Se puede entonces decir que la mayoría de los países se encuentran en un rango intermedio de paz. Se puede también ver una dispersión moderada en los datos, pues el promedio de 0 y el rango intercuartil de 1.15 sugiere cierta similitud entre muchos países. Se observa que el histograma se encuentra con sesgo hacia los valores positivos (derecha), evidenciado por la mayor concentración de países con niveles relativamente altos de paz en comparación con aquellos con bajos índices. Esto se alinea con la forma del histograma, que presenta un pico principal cercano a 0.
+
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### DATOS
+
+```{r echo=FALSE}
+# Resumen estadístico de la columna
+summary(data_clean$GPI_22_invertido)
+```
+
+# CORRELACIONES
+
+Column {data-width=500} {.tabset}
+-----------------------------------------------------------------------
+
+### CORRUPCION Y PAZ
+
+```{r include=FALSE}
+modelo_simple1 <- lm(GPI_22_invertido ~ PCI_22, data = data_clean)
+summary(modelo_simple1)
+```
+
+```{r}
+ggplot(data_clean, aes(x = PCI_22, y = GPI_22_invertido)) +
+  geom_point(color = "black") +
+  geom_smooth(method = "lm", color = "red") +
+  labs(title = "Relación entre la paz y percepción de corrupción",
+       x = "PCI_22", y = "GPI_22") +
+  theme_minimal()
+```
+```{r echo=FALSE}
+modelo_simple1$coefficients
+```
+>relación positiva; sugiere que a medida que aumenta el valor del PCI_22 (menos corrupción percibida), también mejora el GPI_22 (más paz) en 0.03739365. Es decir, a menor corrupción mayor estabilidad y paz en el país.
+
+### LIBERTAD DE PRENSA Y PAZ
+
+```{r include=FALSE}
+modelo_simple2 <- lm(GPI_22_invertido ~ LIB_PREN, data = data_clean)
+summary(modelo_simple2)
+```
+
+```{r}
+ggplot(data_clean, aes(x = LIB_PREN, y = GPI_22_invertido)) +
+  geom_point(color = "black") +
+  geom_smooth(method = "lm", color = "red") +
+  labs(title = "Relación entre la paz y la libertad de prensa",
+       x = "LIB_PREN", y = "GPI_22") +
+  theme_minimal()
+```
+```{r echo=FALSE}
+modelo_simple2$coefficients
+```
+> relación positiva; sugiere que a medida que aumenta el valor del LIB_PREN (mayor libertad de prensa), también mejora el GPI_22 (más paz) en 5.068265e-01. Es decir, a mayor libertad de prensa, mayor estabilidad y paz en el país.
+
+### IDH Y PAZ
+
+```{r include=FALSE}
+modelo_simple3 <- lm(GPI_22_invertido ~ IDH, data = data_clean)
+summary(modelo_simple3)
+```
+
+```{r}
+ggplot(data_clean, aes(x = IDH, y = GPI_22_invertido)) +
+  geom_point(color = "black") +
+  geom_smooth(method = "lm", color = "red") +
+  labs(title = "Relación entre la paz y indice de desarrollo humano",
+       x = "IDH", y = "GPI_22") +
+  theme_minimal()
+```
+```{r echo=FALSE}
+modelo_simple3$coefficients
+```
+> relación positiva; sugiere que a medida que aumenta el valor del IDH (Desarrollo Humano), también mejora el GPI_22 (más paz) en . Es decir, a mayor desarollo humano hay más paz en el país.
+
+### PAZ Y PBI
+
+```{r include=FALSE}
+modelo_simple4 <- lm(log(PBI_2022) ~ GPI_22, data = data_clean)
+summary(modelo_simple4)
+```
+
+```{r}
+ggplot(data_clean, aes(x = log(PBI_2022), y = GPI_22_invertido)) +
+  geom_point(color = "black") +
+  geom_smooth(method = "lm", color = "red") +
+  labs(title = "Relación entre el crecimiento del PBI y la paz",
+       x = "IDH", y = "GPI_22") +
+  theme_minimal()
+```
+```{r echo=FALSE}
+modelo_simple4$coefficients
+```
+> relación positiva débil, existe mucha dispersión; sugiere que a medida que aumenta el valor del PBI (PRODUCTO INTERNO BRUTO), también mejora el GPI_22 (más paz) en 0.1193478 . Es decir, a mayor desarollo economico en el país  más paz.
+
+### PAZ Y DESEMPLEO
+
+```{r include=FALSE}
+modelo_simple5 <- lm(DEST~ GPI_22_invertido, data = data_clean)
+summary(modelo_simple5)
+```
+
+```{r}
+ggplot(data_clean, aes(x = DEST, y = GPI_22_invertido)) +
+  geom_point(color = "black") +
+  geom_smooth(method = "lm", color = "red") +
+  labs(title = "Relación entre el desempleo y la paz",
+       x = "DEST", y = "GPI_22") +
+  theme_minimal()
+```
+```{r echo=FALSE}
+modelo_simple5$coefficients
+```
+>relación inversa débil, existe mucha dispersión; sugiere que a medida que disminuye el valor del DEST (DESEMPLEO), también baja el GPI_22 (más paz) en  -0.6163093. Es decir, a menor desempleo más paz.
+
+### PAZ Y IMPORTACIÓN
+
+```{r include=FALSE}
+modelo_simple6 <- lm(log(IMP_22)~ GPI_22_invertido, data = data_clean)
+summary(modelo_simple6)
+```
+
+```{r}
+ggplot(data_clean, aes(x = log(IMP_22), y = GPI_22_invertido)) +
+  geom_point(color = "black") +
+  geom_smooth(method = "lm", color = "red") +
+  labs(title = "Relación entre importación y la paz",
+       x = "IMP_22", y = "GPI_22") +
+  theme_minimal()
+```
+```{r echo=FALSE}
+modelo_simple6$coefficients
+```
+>relación positiva débil; sugiere que a medida que aumenta el valor de IMP (importaciones), también mejora el GPI_22 (más paz) en 0.2735774. Es decir, a mayor exportaciones más paz.
+
+### PAZ Y EXPORTACIÓN
+
+```{r include=FALSE}
+modelo_simple7 <- lm(log(EXP_22)~ GPI_22_invertido, data = data_clean)
+summary(modelo_simple7)
+```
+
+```{r}
+ggplot(data_clean, aes(x = log(EXP_22), y = GPI_22_invertido)) +
+  geom_point(color = "black") +
+  geom_smooth(method = "lm", color = "red") +
+  labs(title = "Relación entre exportación y la paz",
+       x = "EXP_22", y = "GPI_22") +
+  theme_minimal()
+```
+```{r echo=FALSE}
+modelo_simple7$coefficients
+```
+>relación positiva débil; sugiere que a medida que aumenta el valor de EXP (exportaciones), también mejora el GPI_22 (más paz) en 0.2388796.Es decir, a mayor exportaciones más paz.
+
+### PAZ Y INNOVACIÓN TECNOLOGICA
+
+```{r include=FALSE}
+modelo_simple8 <- lm(IMI~ GPI_22_invertido, data = data_clean)
+summary(modelo_simple8)
+```
+
+```{r}
+ggplot(data_clean, aes(x = IMI, y = GPI_22_invertido)) +
+  geom_point(color = "black") +
+  geom_smooth(method = "lm", color = "red") +
+  labs(title = "Relación entre innovación y la paz",
+       x = "EXP_22", y = "GPI_22") +
+  theme_minimal()
+```
+```{r}
+modelo_simple8$coefficients
+```
+>relación positiva; sugiere que a medida que aumenta el valor de IMI  (Inovacion tecnologica), también mejora el GPI_22 (más paz) en 8.857231. Es decir, a mayor innovación tecnologicos más paz.
+
+# ANALISIS FACTORIAL
+
+Column {data-width=500} {.tabset}
+-----------------------------------------------------------------------
+
+### CORRELACIONES
+
+```{r include=FALSE}
+dontselect=c("PAÍS","REGIÓN","TPR", "PBI_2022", "GPI_22", "GPI_22_invertido", "country")
+select=setdiff(names(data_clean),dontselect) 
+data_num=data_clean[,select]
+
+# usaremos:
+library(magrittr)
+```
+
+```{r include=FALSE}
+head(data_num,10)%>%
+    rmarkdown::paged_table()
+```
+
+```{r echo=FALSE}
+library(polycor)
+corMatrix=polycor::hetcor(data_num)$correlations
+round(corMatrix,2)
+```
+### MATRIZ
+
+```{r}
+library(ggcorrplot)
+ggcorrplot(corMatrix)
+```
+
+>Esta matriz de correlación muestra relaciones lineanes entre las variables. El color rojo indica una correlación positiva cercanas a 1, el blanco correlaciones débiles o nulas, y las azules correlaciones negativas cercanas a -1
+
+### KMO
+
+```{r echo=FALSE}
+psych::KMO(corMatrix)
+```
+>Matriz identidad  
+
+```{r echo=FALSE}
+cortest.bartlett(corMatrix,n=nrow(data_num))$p.value>0.05
+```
+
+>Matriz singular
+
+```{r echo=FALSE}
+library(matrixcalc)
+
+is.singular.matrix(corMatrix)
+```
+```{r include=FALSE}
+fa.parallel(data_num, fa = 'fa',correct = T,plot = F)
+```
+
+```{r include=FALSE}
+resfa <- fa(data_num,
+            nfactors = 3,
+            cor = 'mixed',
+            rotate = "varimax", #oblimin?
+            fm="minres")
+print(resfa$loadings)
+```
+
+```{r include=FALSE}
+print(resfa$loadings,cutoff = 0.5)
+```
+
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### RESULTADOS
+
+```{r}
+fa.diagram(resfa,main = "Resultados")
+```
+
+> Los resultados han arrojado tres grupos: Grupo 1: "Estabilidad Económica Internacional" Grupo 2: "Desarrollo e innovación social" Grupo 3: "Instituciones y Transparencia"
+
+Column {data-width=500} {.tabset}
+-----------------------------------------------------------------------
+
+### APORTACIÓN A LOS FACTORES
+
+```{r echo=FALSE}
+sort(resfa$communality)
+```
+
+### VARIABLES QUE CONTRIBUYEN A MÁS DE UN FACTOR
+
+```{r echo=FALSE}
+sort(resfa$complexity)
+```
+
+### TUCKER LEWIS
+
+```{r echo=FALSE}
+resfa$TLI
+```
+
+### RMS
+
+```{r echo=FALSE}
+resfa$rms
+```
+
+### RMSEA
+
+```{r echo=FALSE}
+resfa$RMSEA
+
+```
+
+### BIC
+
+```{r echo=FALSE}
+resfa$BIC
+```
+
+# HIPOTESIS
+
+Column {data-width=500} {.tabset}
+-----------------------------------------------------------------------
+
+### HIPOTESIS 1
+
+>La paz y estabilidad en un país se ve asociada postivamente con un mayor desarrollo humano y tecnologico, una menor percepción de corrupción y una mayor libertad de prensa
+
+```{r include=FALSE}
+modelo1=formula(GPI_22_invertido~IDH+IMI+PCI_22+LIB_PREN)
+```
+
+```{r include=FALSE}
+reg1=lm(modelo1,data=data_clean)
+summary(reg1)
+```
+
+```{r echo=FALSE}
+library(modelsummary)
+model1=list('apropiacion (I)'=reg1)
+modelsummary(model1, title = "Regresion: modelo 1",
+             stars = TRUE,
+             output = "kableExtra")
+```
+
+### HIPOTESIS 2
+
+>La paz no sólo es un factor social e institucional, sino que para que un país sea realmente pacífico tiene existir un desarrollo economico prospero  
+
+```{r include=FALSE}
+modelo2=formula(GPI_22_invertido~IDH+IMI+PCI_22+LIB_PREN+IMP_22+EXP_22)
+```
+
+```{r include=FALSE}
+reg2=lm(modelo2,data=data_clean)
+summary(reg2)
+```
+
+```{r}
+library(modelsummary)
+model2=list('apropiacion (II)'=reg2)
+modelsummary(model2, title = "Regresion: modelo 2",
+             stars = TRUE,
+             output = "kableExtra")
+```
+
+### HIPOTESIS 3
+
+> Para la paz existen también otros factores, tanto sociales como económicos, que explican la paz de un país, como podría ser el desempleo, puesto que un país con una mayor fuerza laboral tiene un mejor desarrollo económico y social, así como un crecimiento del PBI mayor.
+
+```{r include=FALSE}
+modelo3=formula(GPI_22_invertido~IDH+IMI+PCI_22+IMP_22+EXP_22+PBI_2022+DEST)
+```
+
+```{r include=FALSE}
+reg3=lm(modelo3,data=data_clean)
+summary(reg3)
+```
+
+```{r}
+model3=list('apropiacion (III)'=reg3)
+modelsummary(model3, title = "Regresion: modelo 3",
+             stars = TRUE,
+             output = "kableExtra")
+```
+
+### COMPARACIÓN DE MODELOS
+
+```{r}
+models=list('apropiacion (I)'=reg1,
+            'apropiacion (II)'=reg2,
+            'apropiacion (III)'=reg3)
+modelsummary(models, title = "Resultados de todos los modelos",
+             stars = TRUE,
+             output = "kableExtra")
+```
+
+
+Column {data-width=500} {.tabset}
+-----------------------------------------------------------------------
+
+### MODELOS ESTANDARIZADO 1
+
+```{r}
+model1beta=list('apropiacion (I)'=lm.beta(reg1))
+modelsummary(model1beta, title = "Regresion: modelo 1 con \ncoeficientes estandarizados usando lm.beta()",
+             stars = TRUE,
+             output = "kableExtra")
+```
+
+### MODELOS ESTANDARIZADO 2
+
+```{r}
+library(lm.beta)
+
+
+model2beta=list('apropiacion (II)'=lm.beta(reg2))
+modelsummary(model2beta, title = "Regresion: modelo 2 con \ncoeficientes estandarizados usando lm.beta()",
+             stars = TRUE,
+             output = "kableExtra")
+```
+
+### MODELO ESTANDARIZADO 3
+
+```{r}
+library(lm.beta)
+
+
+model3beta=list('apropiacion (III)'=lm.beta(reg3))
+modelsummary(model3beta, title = "Regresion: modelo 3 con \ncoeficientes estandarizados usando lm.beta()",
+             stars = TRUE,
+             output = "kableExtra")
+```
+
+### COMPARACION MODELOS ESTANDARIZADOS
+
+```{r}
+models=list('apropiacion (I)'=reg1,
+            'apropiacion (II)'=reg2,
+            'apropiacion (III)'=reg3)
+modelsummary(models, title = "Resultados de todos los modelos",statistic = "conf.int",
+             stars = TRUE,
+             output = "kableExtra")
+```
+
+#  MODELOS
+
+Column {data-width=500} {.tabset}
+-----------------------------------------------------------------------
+
+### COMPARACION
+
+```{r echo=FALSE}
+plot_models(reg1,reg2,reg3,vline.color = "black",m.labels=c("Modelo 1","Modelo 2","Modelo 3"),dot.size = 1,line.size = 0.6)
+```
+
+### TABLA ANOVA
+
+```{r}
+library(magrittr)
+library(knitr)
+tanova=anova(reg1,reg2,reg3)
+
+kable(tanova,
+      caption = "Tabla ANOVA para comparar modelos")%>%kableExtra::kable_styling(full_width = FALSE)
+```
+
+Column {data-width=500} {.tabset}
+-----------------------------------------------------------------------
+
+### LINEALIDAD
+
+```{r}
+plot(reg1, 1)
+```
+
+### HOMOCEDEASTICIDAD
+
+```{r}
+plot(reg1, 3)
+```
+```{r echo=FALSE}
+library(lmtest)
+library(kableExtra)
+# null: modelo homocedastico
+resBP=bptest(reg1)
+data.frame(list('BP'=resBP$statistic,
+             'df'=resBP$parameter,
+             "p-value"=resBP$p.value))%>%
+    kable(caption = resBP$method)%>%kable_styling(full_width = F)
+```
+
+
+### NORMALIDAD DE RESIDUOS    
+
+```{r}
+plot(reg1, 2)
+```
+```{r}
+resSW=shapiro.test(reg1$residuals)
+data.frame(list('SW'=resSW$statistic,
+             "p-value"=resSW$p.value))%>%
+    kable(caption = resSW$method)%>%kable_styling(full_width = F)
+```
+
+### NO MULTICOLINEALIDAD
+
+```{r}
+library(DescTools)
+# > 5 es problematico
+VIF(reg1) %>%kable(col.names = "VIF",caption ="Evaluando Multicolinealidad usando VIF (Variance Inflation Factors)" )%>%kable_styling(full_width = F)
+```
+
+### VALORES INFLUYENTES
+
+```{r}
+plot(reg1, 5)
+```
+```{r}
+checkReg2=as.data.frame(influence.measures(reg1)$is.inf)
+checkReg2[checkReg2$cook.d & checkReg2$hat,c('cook.d','hat')]%>%kable(caption = "Valores Influyentes criticos")%>%kable_styling(full_width = F)
+```
+
+# ANALISIS CLUSTER
+
+Row {data-width=350} {.tabset}
+-----------------------------------------------------------------------
+
+### PAM
+
+```{r include=FALSE}
+names(data_clean)
+```
+
+```{r include=FALSE}
+boxplot(data_clean[,c("IMP_22","EXP_22","PCI_22","LIB_PREN","IDH","IMI")],horizontal = F,las=2,cex.axis = 0.5)
+```
+
+```{r include=FALSE}
+boxplot(normalize(data_clean[,c("IMP_22","EXP_22","PCI_22","LIB_PREN","IDH","IMI")],method='range',range=c(0,80)))
+
+```
+
+```{r include=FALSE}
+boxplot(normalize(data_clean[,c("IMP_22","EXP_22","PCI_22","LIB_PREN","IDH","IMI")],method='standardize'))
+
+```
+
+```{r include=FALSE}
+data_clean[,c("IMP_22","EXP_22","PCI_22","LIB_PREN","IDH","IMI")]=normalize(data_clean[,c("IMP_22","EXP_22","PCI_22","LIB_PREN","IDH","IMI")],method='standardize')
+
+#idhdemo[,c(4:7)]=normalize(idhdemo[,c(4:7)],method='standardize')
+```
+
+```{r include=FALSE}
+#matriz_cluster <- cor(data_clean[,c("GPI_22","IMP_22","EXP_22","PBI_2022","PCI_22","LIB_PREN","IDH","IMI","DEST")])
+
+matriz_cluster_original <- cor(data_clean[,c("IMP_22","EXP_22","PCI_22","LIB_PREN","IDH","IMI")])
+```
+
+```{r include=FALSE}
+dataClus = data_clean[,c("IMP_22","EXP_22","PCI_22","LIB_PREN","IDH","IMI")]
+row.names(dataClus) = data_clean$PAÍS 
+```
+
+```{r include=FALSE}
+g.dist = daisy(dataClus, metric="gower")
+
+g.dist2 = daisy(dataClus, metric="euclidean")
+
+g.dist3 = daisy(dataClus, metric="manhattan")
+```
+
+```{r include=FALSE}
+fviz_nbclust(dataClus, pam,diss=g.dist,method = "gap_stat",k.max = 10,verbose = F)
+```
+
+```{r include=FALSE}
+library(kableExtra)
+set.seed(123)
+res.pam=pam(g.dist,2,cluster.only = F)
+
+#nueva columna
+dataClus$pam=res.pam$cluster
+
+# ver
+
+head(dataClus,15)%>%kbl()%>%kable_styling()
+```
+
+```{r include=FALSE}
+silPAM=data.frame(res.pam$silinfo$widths)
+silPAM$country=row.names(silPAM)
+poorPAM=silPAM[silPAM$sil_width<0,'country']%>%sort()
+poorPAM
+```
+
+```{r echo=FALSE}
+fviz_silhouette(res.pam,print.summary = F)
+```
+```{r include=FALSE}
+table(res.pam$cluster)
+```
+
+```{r include=FALSE}
+aggregate(.~ pam, data=dataClus,mean)
+```
+
+```{r include=FALSE}
+data_clean$pamIDHpoor=data_clean$country%in%poorPAM
+data_clean$pamIDH=as.ordered(dataClus$pam)
+dataClus$pam=NULL
+```
+
+### AGNES
+
+```{r include=FALSE}
+fviz_nbclust(dataClus, hcut,diss=g.dist,method = "gap_stat",k.max = 10,verbose = F,hc_func = "agnes")
+
+```
+
+```{r include=FALSE}
+set.seed(123)
+library(factoextra)
+
+res.agnes<- hcut(g.dist, k = 2,hc_func='agnes',hc_method = "ward.D")
+
+dataClus$agnes=res.agnes$cluster
+
+# ver
+
+head(dataClus,15)%>%kbl()%>%kable_styling()
+```
+
+```{r include=FALSE}
+fviz_dend(res.agnes, cex = 0.7, horiz = T,main = "")
+```
+
+```{r echo=FALSE}
+fviz_silhouette(res.agnes,print.summary = F)
+
+```
+```{r}
+silAGNES=data.frame(res.agnes$silinfo$widths)
+silAGNES$country=row.names(silAGNES)
+poorAGNES=silAGNES[silAGNES$sil_width<0,'country']%>%sort()
+poorAGNES
+```
+```{r include=FALSE}
+aggregate(.~ agnes, data=dataClus,mean)
+```
+
+```{r include=FALSE}
+data_clean$agnesIDHpoor=data_clean$country%in%poorAGNES
+data_clean$agnesIDH=as.ordered(dataClus$agnes)
+dataClus$agnes=NULL
+```
+
+```{r include=FALSE}
+table(data_clean$pamIDH,data_clean$agnesIDH,dnn = c('Particion','Aglomeracion'))
+```
+
+### DIANA
+
+```{r include=FALSE}
+fviz_nbclust(dataClus, hcut,diss=g.dist,method = "gap_stat",k.max = 10,verbose = F,hc_func = "diana")
+
+```
+
+```{r include=FALSE}
+set.seed(123)
+res.diana <- hcut(g.dist, k = 3,hc_func='diana')
+dataClus$diana=res.diana$cluster
+# veamos
+head(dataClus,15)%>%kbl%>%kable_styling()
+```
+
+```{r include=FALSE}
+cor(data_clean[,c(11:4)], use = "complete.obs")
+```
+
+```{r include=FALSE}
+fviz_dend(res.diana, cex = 0.7, horiz = T, main = "")
+```
+
+```{r}
+fviz_silhouette(res.diana,print.summary = F)
+```
+```{r}
+silDIANA=data.frame(res.diana$silinfo$widths)
+silDIANA$country=row.names(silDIANA)
+poorDIANA=silDIANA[silDIANA$sil_width<0,'country']%>%sort()
+poorDIANA
+```
+```{r include=FALSE}
+proyeccion = cmdscale(g.dist, k=2,add = T) 
+head(proyeccion$points,20)
+```
+
+```{r include=FALSE}
+data_clean$dim1 <- proyeccion$points[,1]
+data_clean$dim2 <- proyeccion$points[,2]
+```
+
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### AGRUPACIÓN DE PAÍSES
+
+```{r}
+library(ggrepel)
+base= ggplot(data_clean,aes(x=dim1, y=dim2,label=row.names(dataClus))) 
+base + geom_text_repel(size=3, max.overlaps = 50,min.segment.length = unit(0, 'lines'))
+```
+
+# CONCLUSIONES
+
+Respondiendo a la pregunta ¿Qué factores influyen en la variabilidad del índice global de paz? Se planteó la hipótesis de que bajo la teoría de Interdependencia Compleja de las RI se puede hipotetizar que a un mayor nivel de corrupción y menor importación y exportación de bienes y servicios están asociados con un incremento en Global Peace Index, indicando niveles altos de violencia y baja estabilidad, así como paz. Se puede corroborar la hipótesis planteada, debido a que sí,factores como un mayor nivel de corrupción y menor importación y exportación de bienes y servicios están asociados con un incremento en Global Peace Index, pero estos factores varían en el incremento y su efecto. 
+
+Las variables mostraron poca correlación entre sí con un KMO de 0.64, lo que podría indicar que existen otras variables que expliquen de mejor manera el GPI
+
+La agrupación tras el analisis factorial mostró tres grupos: El desarrollo humano y tecnologico, factores economicos, transparencia institucional y social. Además, variable como el PBI y desempleo mostraron no ser significativas o no agruparse en alguno de los grupos
+
+Tras el planteamiento de 3 hipotesis, se puede argumentar que el mejor modelo fue el primer modelo, pues se eligió por su simplicidad
+
+Los tres analisis cluster mostraron como recomendación 1 sólo cluster, a pesar de ello, se elegió proceder con 2 clústers, con excepción de Diana que fueron 3
+
+El mejor cluster fue el  de PAM, puesto que tras el analisis de la silueta fue el que mostró una cantidad apropiada, asi como una agrupación menor (a diferencia de Diana), así como todos los datos bien clusterizados. 
+
+La agrupación hecha por analisis clúster, usando las variables "IMP_22","EXP_22","PCI_22","LIB_PREN","IDH","IMI"; mostró una agrupación similar al del GPI, lo que puede indicar que las variables, a pesar de no tener una alta correlación, si pueden explicar el GPI de buena manera
+
+
